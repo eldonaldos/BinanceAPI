@@ -1,74 +1,77 @@
 import os
 import json
 import subprocess
-import requests
 from datetime import datetime, timezone
+from pathlib import Path
 
-SYMBOLS = ["CLOUSDT", "BLESSUSDT", "RIVERUSDT"]
+TOKENS = ["CLOUSDT", "BLESSUSDT", "RIVERUSDT"]  # hier easy erweitern
 
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
-GIST_ID = os.environ["GIST_ID"]
-TOKEN_GIST = os.environ["TOKEN_GIST"]
+TIMEFRAMES = ["15m", "1h", "4h", "1d"]          # wie du willst: 15m, 1h, 4h, daily
 
-# ---- SET THIS to your pack script filename ----
-PACK_SCRIPT = "binance_pack.py"  # <-- change if needed
+OUT_DIR = Path("out")
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-def utc_now():
+def now_utc_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
-def tg_send(text: str):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    r = requests.post(url, json={
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": text,
-        "disable_web_page_preview": True
-    }, timeout=20)
-    r.raise_for_status()
+def run_pack(pack_script: str, symbol: str, tf: str) -> dict:
+    """
+    Erwartet, dass binance_pack.py eine JSON-Zeile auf stdout ausgibt.
+    Falls dein pack-script anders arbeitet, sag kurz wie (Argumente/Output),
+    dann passe ich runner+workflow an.
+    """
+    cmd = ["python", pack_script, "--symbol", symbol, "--timeframe", tf]
+    p = subprocess.run(cmd, capture_output=True, text=True)
 
-def gist_update(filename: str, content: str):
-    url = f"https://api.github.com/gists/{GIST_ID}"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN_GIST}",
-        "Accept": "application/vnd.github+json"
-    }
-    payload = {"files": {filename: {"content": content}}}
-    r = requests.patch(url, headers=headers, json=payload, timeout=30)
-    r.raise_for_status()
+    if p.returncode != 0:
+        return {
+            "meta": {"symbol": symbol, "timeframe": tf, "timestamp_utc": now_utc_str()},
+            "error": "pack_script_failed",
+            "stderr": p.stderr[-4000:],
+            "stdout": p.stdout[-4000:],
+            "returncode": p.returncode,
+        }
 
-def load_pack(path: str):
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    # nimmt die letzte nicht-leere Zeile als JSON
+    lines = [ln.strip() for ln in p.stdout.splitlines() if ln.strip()]
+    if not lines:
+        return {
+            "meta": {"symbol": symbol, "timeframe": tf, "timestamp_utc": now_utc_str()},
+            "error": "no_output_from_pack_script",
+        }
 
-def compact_line(symbol: str, pack: dict) -> str:
-    snap = pack.get("snapshot", {})
-    px = snap.get("lastPrice")
-    fr = snap.get("funding_last")
-    oi = snap.get("openInterest_now")
-    return f"{symbol}: px={px} funding={fr} OI={oi}"
+    try:
+        return json.loads(lines[-1])
+    except Exception as e:
+        return {
+            "meta": {"symbol": symbol, "timeframe": tf, "timestamp_utc": now_utc_str()},
+            "error": "invalid_json_from_pack_script",
+            "exception": str(e),
+            "raw_last_line": lines[-1][:2000],
+        }
 
 def main():
-    # 1) run your pack script
-    # Assumes it creates files like CLOUSDT_pack.json etc.
-    cmd = ["python", PACK_SCRIPT, ",".join(SYMBOLS)]
-    subprocess.run(cmd, check=True)
+    pack_script = os.getenv("PACK_SCRIPT", "binance_pack.py")
 
-    # 2) load packs, update gist, build telegram message
-    lines = [f"Run {utc_now()} UTC"]
-    for sym in SYMBOLS:
-        fn = f"{sym}_pack.json"
-        pack = load_pack(fn)
+    summary = {
+        "run_timestamp_utc": now_utc_str(),
+        "pack_script": pack_script,
+        "tokens": TOKENS,
+        "timeframes": TIMEFRAMES,
+        "files_written": []
+    }
 
-        # update gist
-        gist_update(fn, json.dumps(pack, indent=2))
+    for sym in TOKENS:
+        for tf in TIMEFRAMES:
+            data = run_pack(pack_script, sym, tf)
+            fname = OUT_DIR / f"{sym}_{tf}.json"
+            fname.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            summary["files_written"].append(str(fname))
 
-        lines.append(compact_line(sym, pack))
+    # immer ein Summary schreiben
+    (OUT_DIR / "_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
-    # also update a combined file if present
-    if os.path.exists("binance_pack_all.json"):
-        gist_update("binance_pack_all.json", open("binance_pack_all.json", "r", encoding="utf-8").read())
-
-    tg_send("\n".join(lines))
+    print(json.dumps(summary, indent=2))
 
 if __name__ == "__main__":
     main()
