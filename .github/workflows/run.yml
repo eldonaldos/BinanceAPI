@@ -1,15 +1,16 @@
-name: Perp Runner
+name: Run runner
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"   # alle 15 Minuten
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -17,17 +18,31 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run runner
+      - name: Debug - list files
+        run: |
+          pwd
+          ls -la
+          ls -la .github || true
+          ls -la .github/workflows || true
+
+      - name: Run
         env:
+          TOKEN_GIST: ${{ secrets.TOKEN_GIST }}
+          GIST_ID: ${{ secrets.GIST_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          GIST_ID: ${{ secrets.GIST_ID }}
-          TOKEN_GIST: ${{ secrets.GITHUB_TOKEN_GIST }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PACK_SCRIPT: binance_pack.py
         run: |
           python runner.py
+
+      - name: Upload output as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packs
+          path: out/*.json
+          if-no-files-found: warn
