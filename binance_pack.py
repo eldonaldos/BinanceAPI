@@ -14,7 +14,7 @@ BASE_UM = "https://fapi.binance.com"
 @dataclass
 class Config:
     # Default Watchlist (easy edit)
-    symbols: List[str] = field(default_factory=lambda: ["CLOUSDT", "BLESSUSDT", "MONUSDT", "BREVUSDT"])
+    symbols: List[str] = field(default_factory=lambda: ["CLOUSDT", "BLESSUSDT", "RIVERUSDT"])
 
     # Liquidity structure timeframes
     intervals: List[str] = field(default_factory=lambda: ["15m", "4h", "1d"])
@@ -635,3 +635,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
