@@ -635,4 +635,20 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    # Default tokens
+    symbols = ["CLOUSDT", "BLESSUSDT", "RIVERUSDT"]
+
+    # Optional override: "CLOUSDT,BLESSUSDT,RIVERUSDT"
+    if len(sys.argv) > 1 and sys.argv[1].strip():
+        symbols = [s.strip().upper() for s in sys.argv[1].split(",") if s.strip()]
+
+    # Wenn dein Script aktuell nur 1 Symbol kann, dann loop:
+    for sym in symbols:
+        # hier muss deine Funktion aufgerufen werden, die pro Symbol ein *_pack.json schreibt
+        # z.B.: pack = build_token_pack(sym, cfg)  oder analyze_symbol(sym)
+        # und dann speichern:
+        # with open(f"{sym}_pack.json","w",encoding="utf-8") as f: json.dump(pack,f,indent=2)
+        pass
+
 
