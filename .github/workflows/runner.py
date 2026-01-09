@@ -12,7 +12,7 @@ GIST_ID = os.environ["GIST_ID"]
 TOKEN_GIST = os.environ["GITHUB_TOKEN_GIST"]
 
 # ---- SET THIS to your pack script filename ----
-PACK_SCRIPT = "binance_pack_multi_signals.py"  # <-- change if needed
+PACK_SCRIPT = "binance_pack.py"  # <-- change if needed
 
 def utc_now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
