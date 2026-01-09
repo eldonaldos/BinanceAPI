@@ -9,7 +9,7 @@ SYMBOLS = ["CLOUSDT", "BLESSUSDT", "RIVERUSDT"]
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 GIST_ID = os.environ["GIST_ID"]
-TOKEN_GIST = os.environ["GITHUB_TOKEN_GIST"]
+TOKEN_GIST = os.environ["TOKEN_GIST"]
 
 # ---- SET THIS to your pack script filename ----
 PACK_SCRIPT = "binance_pack.py"  # <-- change if needed
