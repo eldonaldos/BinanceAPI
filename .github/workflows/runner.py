@@ -4,7 +4,7 @@ import subprocess
 import requests
 from datetime import datetime, timezone
 
-SYMBOLS = ["CLOUSDT", "BLESSUSDT", "RIVERUSDT"]
+SYMBOLS = ["CLOUSDT", "BLESSUSDT", "RIVERUSDT", "BREVUSDT"]
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
